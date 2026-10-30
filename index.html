@@ -258,6 +258,13 @@ textarea{resize:vertical;min-height:110px}
     <section class="card">
       <h2>登録済みの曲 <small id="songCount" style="color:var(--muted);font-weight:400"></small></h2>
       <p class="hint">ここで直すと、セトリと印刷イメージにもすぐ反映されます。</p>
+      <div class="csvbox">
+        <div class="btns">
+          <button class="btn" id="csvExport">CSVで書き出す（Excelで開けます）</button>
+          <label class="btn" style="flex-direction:row;color:var(--ink);font-size:15px">CSVを読み込む<input type="file" id="csvImport" accept=".csv,text/csv" hidden></label>
+        </div>
+        <p class="hint" style="margin:8px 0 0">読み込むと、同じ曲名の曲は上書き、新しい曲は追加されます（消える曲はありません）。列は「曲名・尺・音源・出し方・終わり・備考」。音源などは「被せ／オケ／生歌」「合図で出す／すぐ出す／暗転明けに出す」「最後まで／フェードアウト（FO）／カットアウト（CO）」で書いてください。</p>
+      </div>
       <div class="tbl-scroll">
         <table class="songtbl">
           <thead><tr><th>曲名</th><th>尺</th><th>音源</th><th>出し方</th><th>終わり</th><th>PAへの備考</th><th></th></tr></thead>
@@ -527,6 +534,56 @@ $('#songBody').addEventListener('click',e=>{
   if(!e.target.dataset.del)return;const s=song(e.target.closest('tr').dataset.id);
   if(!confirm(`「${s.title}」を削除しますか？セトリからも外れます。`))return;
   S.songs=S.songs.filter(x=>x!==s);save();renderSongs();renderAll();
+});
+
+/* ── CSV ── */
+const CSV_HEAD=['曲名','尺','音源','出し方','終わり','備考'];
+const CSV_KEY={'曲名':'title','タイトル':'title','尺':'len','長さ':'len','時間':'len','音源':'source','出し方':'start','始まり':'start','終わり':'end','終わり方':'end','備考':'note','PAへの備考':'note','メモ':'note'};
+const ALIAS={
+  source:[[/被せ|かぶせ|カブセ/,'被せ'],[/オケ|カラオケ|おけ/,'オケ'],[/生/,'生歌']],
+  start:[[/すぐ|つなぎ|繋ぎ|続けて/,'すぐ出す'],[/暗転/,'暗転明けに出す'],[/合図|きっかけ/,'合図で出す']],
+  end:[[/^\s*FO\s*$|フェード/i,'フェードアウト'],[/^\s*CO\s*$|カット/i,'カットアウト'],[/最後|そのまま|フル/,'最後まで']]
+};
+function normOpt(k,v){v=String(v||'').trim();if(!v)return OPT[k][0];if(OPT[k].includes(v))return v;for(const[re,o]of ALIAS[k])if(re.test(v))return o;return OPT[k][0]}
+function csvCell(v){v=String(v??'');return /[",\r\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v}
+function parseCSV(t){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(cell);cell=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}
+    else cell+=c;}
+  if(cell!==''||row.length){row.push(cell);rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function decode(buf){
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(buf).replace(/^﻿/,'')}
+  catch(e){return new TextDecoder('shift_jis').decode(buf)}   // Excelの「CSV（コンマ区切り）」はShift_JIS
+}
+$('#csvExport').addEventListener('click',()=>{
+  const lines=[CSV_HEAD.join(',')].concat(S.songs.map(s=>[s.title,s.len,s.source,s.start,s.end,s.note].map(csvCell).join(',')));
+  const blob=new Blob(['﻿'+lines.join('\r\n')+'\r\n'],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`曲リスト_${todayStr()}.csv`;
+  document.body.appendChild(a);a.click();a.remove();toast(S.songs.length?`${S.songs.length}曲を書き出しました`:'ひな形（見出しだけ）を書き出しました');
+});
+$('#csvImport').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const rows=parseCSV(decode(await f.arrayBuffer()));if(!rows.length)throw 0;
+    let map=rows[0].map(h=>CSV_KEY[h.trim()]);
+    if(map.includes('title'))rows.shift();else map=['title','len','source','start','end','note'];   // 見出しなしなら列順で読む
+    let add=0,upd=0;
+    rows.forEach(r=>{
+      const o={};map.forEach((k,i)=>{if(k)o[k]=(r[i]??'').trim()});
+      if(!o.title)return;
+      const v={title:o.title,len:normLen(o.len||''),source:normOpt('source',o.source),start:normOpt('start',o.start),end:normOpt('end',o.end),note:o.note||''};
+      const ex=S.songs.find(s=>s.title===o.title);
+      if(ex){for(const k in v)if(k==='title'||o[k]!==undefined)ex[k]=v[k];upd++}else{S.songs.push({id:uid(),...v});add++}
+    });
+    if(!add&&!upd)throw 0;
+    save();renderSongs();renderAll();toast(`${add}曲追加・${upd}曲更新しました`);
+  }catch(err){toast('CSVを読み込めませんでした。1行目が「曲名,尺,…」になっているか確認してください')}
 });
 
 /* ── 控え ── */
