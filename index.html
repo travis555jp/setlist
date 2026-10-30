@@ -216,7 +216,7 @@ textarea{resize:vertical;min-height:110px}
 
       <section class="card">
         <h2>保存したセトリ</h2>
-        <p class="hint">よく使うセトリを保存しておくと、次から呼び出すだけで済みます。</p>
+        <p class="hint">よく使うセトリを保存しておくと、次から呼び出すだけで済みます。呼び出しても、上のライブ情報（会場・持ち時間など）は変わりません。</p>
         <div class="saverow">
           <input id="saveName" placeholder="名前（例：定期公演 基本セトリ）">
           <button class="btn dark" id="saveBtn">今のセトリを保存</button>
@@ -436,8 +436,10 @@ $('#saved').addEventListener('click',e=>{
   const i=+b.closest('li').dataset.i,v=S.saved[i];
   if(b.dataset.act==='load'){
     if(S.list.length&&!confirm(`「${v.name}」を呼び出します。今のセトリは置き換わります。`))return;
-    S.list=clone(v.list).map(x=>({...x,id:uid()}));S.show={...clone(v.show),date:S.show.date||v.show.date};
-    save();fillShow();renderAll();toast('呼び出しました（日付は今の日付のまま）');
+    S.list=clone(v.list).map(x=>({...x,id:uid()}));
+    // ライブ情報（会場・持ち時間など）は今の入力のまま。SEだけ空欄なら引き継ぐ
+    ['seIn','seOut'].forEach(k=>{if(!S.show[k]&&v.show&&v.show[k])S.show[k]=v.show[k]});
+    save();fillShow();renderAll();toast('セトリを呼び出しました（ライブ情報はそのまま）');
   }
   if(b.dataset.act==='del'&&confirm(`「${v.name}」を削除しますか？`)){S.saved.splice(i,1);save();renderSaved()}
 });
@@ -457,7 +459,7 @@ function sheetHTML(){
   });
   if(sh.seOut){rows+=`<tr class="se"><td class="c"><b>SE</b></td><td colspan="6"><b>退場SE</b>　${esc(sh.seOut)}</td></tr>`;count++}
   if(!n&&!rows)rows='<tr><td colspan="7" class="c muted">曲がまだ選ばれていません</td></tr>';
-  const info=[['会場',sh.venue],['出番',sh.slot],['持ち時間',sh.time?`${esc(sh.time)}分`:''],['マイク',sh.mics],['当日連絡先',sh.contact]]
+  const info=[['会場',sh.venue],['出番',sh.slot],['持ち時間',sh.time?(/^\s*[\d０-９.]+\s*$/.test(sh.time)?`${esc(z2h(sh.time).trim())}分`:esc(sh.time)):''],['マイク',sh.mics],['当日連絡先',sh.contact]]
     .filter(x=>x[1]);
   const cells=info.map(([k,v])=>`<div><dt>${k}</dt><dd>${k==='持ち時間'?v:esc(v)}</dd></div>`);
   while(cells.length%4)cells.push('<div></div>');
