@@ -86,6 +86,7 @@ footer{text-align:center;color:var(--muted);font-size:13px}
       <a href="#live">ライブのたびに</a>
       <a href="#words">指示の言葉の意味</a>
       <a href="#saved">よく使うセトリを保存</a>
+      <a href="#cd">CD-Rを作る</a>
       <a href="#qa">困ったとき</a>
     </nav>
   </div>
@@ -182,6 +183,34 @@ footer{text-align:center;color:var(--muted);font-size:13px}
     <p style="margin-top:10px">呼び出しても、会場・持ち時間などのライブ情報は今入れている内容のままです。</p>
   </section>
 
+  <section class="part" id="cd">
+    <span class="when">必要なときに</span>
+    <h2>セトリ順のCD-Rを作る</h2>
+    <p>セトリの順番どおりに音源を並べて、PAさんに渡す音楽CDを作れます。<b>パソコンの Chrome か Edge</b> と、CDに書き込めるドライブが必要です。</p>
+    <ol class="steps">
+      <li>
+        <h3>音源フォルダをつなぐ</h3>
+        <p>画面上の <span class="btnname">CDを作る</span> を押し、<span class="btnname">音源フォルダを選ぶ</span> で、曲の音源（WAV・MP3など）が入ったフォルダを選びます。ブラウザに「ファイルの編集を許可しますか」と聞かれたら許可してください。2回目からは <span class="btnname">前回のフォルダにつなぐ</span> を押すだけです。</p>
+      </li>
+      <li>
+        <h3>曲順とファイルを確かめる</h3>
+        <p>曲名とファイル名が似ていれば自動で結び付きます。違うファイルが選ばれている時や空欄の時は、右の欄で選び直します（次回からも覚えています）。長さも音源から自動で出ます。</p>
+        <img class="shot" src="manual/10-cd.png" alt="CDの曲順と音源ファイルの一覧">
+        <div class="tip"><b>PA指示書にもトラック番号が入ります</b>「M1」の下に小さく「Tr2」のように入るので、PAさんがCDの何曲目かすぐ分かります。入れたくない時はチェックを外します。</div>
+      </li>
+      <li>
+        <h3>CD用フォルダを作る</h3>
+        <p><span class="btnname y">💿 CD用フォルダを作る</span> を押すと、音源フォルダの中に「CD_日付_会場」というフォルダができ、「01 登場SE …」「02 曲名」…と番号付きでコピーされます。元のファイルはそのままです。</p>
+      </li>
+      <li>
+        <h3>CD-Rに書き込む</h3>
+        <p><b>Windows</b>：Windows Media Player（Windows 11 では「Windows Media Player レガシ」）の「書き込み」タブ → 種類を「オーディオCD」に → 作ったフォルダのファイルを全部選んで書き込みリストへドラッグ → 「書き込みの開始」。</p>
+        <p style="margin-top:6px"><b>Mac</b>：ミュージックアプリで新しいプレイリストを作る → 作ったフォルダのファイルを全部ドラッグ → 「ファイル → プレイリストからディスクを作成」 → 「オーディオCD」・曲間「なし」で作成。</p>
+        <div class="tip"><b>書き込んだら</b>CDプレーヤーで曲順と頭出しを一度確認しておくと安心です。CD-R 1枚に入るのは約80分までです。</div>
+      </li>
+    </ol>
+  </section>
+
   <section class="part" id="qa">
     <h2>困ったとき</h2>
     <dl class="qa">
@@ -195,6 +224,10 @@ footer{text-align:center;color:var(--muted);font-size:13px}
       <dd>14行を超えると自動で行が詰まります。それでも収まらない時は、印刷画面の「倍率」を90%くらいにしてください。</dd>
       <dt>曲名のスペルを直したい</dt>
       <dd>「曲の登録」の一覧で直接書き換えれば、セトリと印刷イメージにもすぐ反映されます。</dd>
+      <dt>「CDを作る」でフォルダが選べない</dt>
+      <dd>パソコンの Chrome か Edge で開いているか確認してください（Safari・Firefox・スマホでは使えません）。許可を聞かれて「許可しない」を押した時は、<span class="btnname">別のフォルダを選ぶ</span> からやり直します。</dd>
+      <dt>音源の長さが「—」になる</dt>
+      <dd>ブラウザが読めない形式の音源です。CDは作れますが、長さの確認ができません。WAVかMP3に書き出し直すと確実です。</dd>
       <dt>入力した内容は外に送られますか？</dt>
       <dd>送られません。データはこのパソコンの中だけにあり、ツールの置き場所（GitHub）からも見えません。</dd>
     </dl>

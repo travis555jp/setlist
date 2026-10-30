@@ -155,6 +155,24 @@ textarea{resize:vertical;min-height:110px}
 .sh-foot .over{color:#000;text-decoration:underline}
 .sh-legend{margin-top:3mm;font-size:8.5pt;color:#333;border-top:.6pt solid #999;padding-top:2mm}
 
+/* CDを作る */
+.cdtbl{min-width:640px}
+.cdtbl td.tr{font-weight:700;font-variant-numeric:tabular-nums;width:44px}
+.cdtbl td.lbl{color:var(--muted);width:70px;white-space:nowrap}
+.cdtbl td.dur{width:110px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cdtbl tr.miss select{border-color:var(--warn);background:#fff6f2}
+.cdtbl .diff{display:block;font-size:12px;color:var(--warn)}
+.folder{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.folder .name{font-weight:700}
+.folder .ok{color:#1d7a46;font-weight:700}
+.chk{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px;margin-top:12px}
+.chk input{width:18px;height:18px}
+.progress{margin-top:12px;font-weight:500}
+.burn{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.burn h3{margin:0 0 6px;font-size:16px}
+.burn ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:4px}
+.burn .box{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.sh-list td .trno{display:block;font-size:7.5pt;font-weight:700;letter-spacing:.02em;margin-top:.5mm}
 #printArea{display:none}
 @media print{
   @page{size:A4 portrait;margin:10mm}
@@ -172,6 +190,7 @@ textarea{resize:vertical;min-height:110px}
   <nav class="tabs" role="tablist">
     <button id="tabBuild" role="tab" aria-selected="true">セトリを組む</button>
     <button id="tabSongs" role="tab" aria-selected="false">曲の登録</button>
+    <button id="tabCD" role="tab" aria-selected="false">CDを作る</button>
   </nav>
   <div class="spacer"></div>
   <a class="howto" href="manual.html" target="_blank" rel="noopener">？ 使い方</a>
@@ -292,6 +311,71 @@ textarea{resize:vertical;min-height:110px}
         <button class="btn" id="exportBtn">控えをファイルに書き出す</button>
         <label class="btn" style="flex-direction:row;color:var(--ink);font-size:15px">控えファイルから戻す<input type="file" id="importFile" accept=".json,application/json" hidden></label>
       </div>
+    </section>
+  </div>
+</main>
+
+<!-- CDを作る -->
+<main id="viewCD" class="view" hidden>
+  <div class="songs-wrap">
+    <section class="card" id="cdUnsupported" hidden>
+      <h2>この機能はパソコンの Chrome か Edge で使えます</h2>
+      <p class="hint" style="margin:0">音源フォルダを読み書きするため、Safari・Firefox・スマホでは使えません。パソコンの Chrome か Edge でこのページを開き直してください。</p>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">1</span>音源フォルダをつなぐ</h2>
+      <p class="hint">曲の音源（WAV・MP3など）をまとめて入れているフォルダを選びます。ブラウザに「ファイルの編集を許可」と聞かれたら許可してください。2回目からは「つなぐ」を押すだけです。</p>
+      <div class="folder" id="folderInfo"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">2</span>曲順とファイルを確かめる</h2>
+      <p class="hint">セトリの順番（登場SE → 曲 → 退場SE）がそのままCDの曲順になります。MCはCDに入りません。ファイルが違うときは選び直してください（次回からも覚えています）。</p>
+      <div class="tbl-scroll">
+        <table class="songtbl cdtbl">
+          <thead><tr><th>Tr</th><th>セトリ</th><th>曲名</th><th>音源ファイル</th><th>長さ</th></tr></thead>
+          <tbody id="cdBody"></tbody>
+        </table>
+      </div>
+      <div class="totals" id="cdTotals"></div>
+      <div class="btns" style="margin-top:10px"><button class="btn" id="fitLen" hidden>登録している尺を、音源の長さに合わせる</button></div>
+      <label class="chk"><input type="checkbox" id="cdOnSheet"> PA指示書にCDのトラック番号（Tr）を入れる</label>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">3</span>CD用フォルダを作る</h2>
+      <p class="hint">音源フォルダの中に「CD_日付_会場」というフォルダを作り、曲順どおりに「01 …」「02 …」と番号を付けてコピーします。元のファイルはそのままです。</p>
+      <button class="print-btn" id="makeCD">💿 CD用フォルダを作る</button>
+      <div class="progress" id="cdProgress" role="status"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">4</span>CD-Rに書き込む</h2>
+      <p class="hint">普通のCDプレーヤーで再生できる「音楽CD」として書き込みます。CD-R 1枚に入るのは約80分までです。</p>
+      <div class="burn">
+        <div class="box">
+          <h3>Windows の場合</h3>
+          <ol>
+            <li>CD-Rをドライブに入れる</li>
+            <li>スタートメニューで「Windows Media Player」を開く（Windows 11 では「Windows Media Player レガシ」）</li>
+            <li>右上の「書き込み」タブを開き、書き込みの種類が「オーディオCD」になっているか確認</li>
+            <li>エクスプローラーで作ったCD用フォルダを開き、ファイルを全部選んで（Ctrl＋A）書き込みリストへドラッグ</li>
+            <li>リストが01から順に並んでいるのを確かめて「書き込みの開始」</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>Mac の場合</h3>
+          <ol>
+            <li>CD-Rをドライブに入れる</li>
+            <li>ミュージックアプリで「ファイル → 新規 → プレイリスト」を作る</li>
+            <li>Finderで作ったCD用フォルダを開き、ファイルを全部選んで（⌘＋A）プレイリストへドラッグ</li>
+            <li>01から順に並んでいるのを確かめて「ファイル → プレイリストからディスクを作成」</li>
+            <li>「オーディオCD」を選び、曲間を「なし」にして「ディスクを作成」</li>
+          </ol>
+        </div>
+      </div>
+      <p class="hint" style="margin:12px 0 0">書き込んだら、CDプレーヤーで曲順と頭出しを一度確認しておくと安心です。</p>
     </section>
   </div>
 </main>
@@ -458,18 +542,20 @@ $('#saved').addEventListener('click',e=>{
 
 /* ── 紙面 ── */
 function sheetHTML(){
-  const sh=S.show;let n=0,rows='',count=0;
-  if(sh.seIn){rows+=`<tr class="se"><td class="c"><b>SE</b></td><td colspan="6"><b>登場SE</b>　${esc(sh.seIn)}</td></tr>`;count++}
+  const sh=S.show;let n=0,rows='',count=0,tr=0;
+  const showTr=S.cdOnSheet!==false&&cdTracks().some(t=>t.file);
+  const trTag=()=>showTr?`<span class="trno">Tr${++tr}</span>`:'';
+  if(sh.seIn){rows+=`<tr class="se"><td class="c"><b>SE</b>${trTag()}</td><td colspan="6"><b>登場SE</b>　${esc(sh.seIn)}</td></tr>`;count++}
   S.list.forEach(it=>{
     count++;
     if(it.type==='mc'){rows+=`<tr class="mc"><td class="c"><b>MC</b></td><td colspan="6">MC（約${it.min}分）${it.note?'　'+esc(it.note):''}</td></tr>`;return}
     const s=song(it.songId);if(!s)return;n++;
     const st=it.start||s.start,en=it.end||s.end;
     const note=[s.note,it.note].filter(Boolean).map(esc).join('<br>');
-    rows+=`<tr><td class="c no">M${n}</td><td class="title">${esc(s.title)}</td><td class="c">${esc(s.len)}</td><td class="c">${esc(s.source)}</td>`+
+    rows+=`<tr><td class="c no">M${n}${trTag()}</td><td class="title">${esc(s.title)}</td><td class="c">${esc(s.len)}</td><td class="c">${esc(s.source)}</td>`+
       `<td class="c ${st==='すぐ出す'?'em':''}">${esc(st)}</td><td class="c ${en!=='最後まで'?'em':''}">${esc(en)}</td><td class="note">${note}</td></tr>`;
   });
-  if(sh.seOut){rows+=`<tr class="se"><td class="c"><b>SE</b></td><td colspan="6"><b>退場SE</b>　${esc(sh.seOut)}</td></tr>`;count++}
+  if(sh.seOut){rows+=`<tr class="se"><td class="c"><b>SE</b>${trTag()}</td><td colspan="6"><b>退場SE</b>　${esc(sh.seOut)}</td></tr>`;count++}
   if(!n&&!rows)rows='<tr><td colspan="7" class="c muted">曲がまだ選ばれていません</td></tr>';
   const info=[['会場',sh.venue],['出番',sh.slot],['持ち時間',sh.time?(/^\s*[\d０-９.]+\s*$/.test(sh.time)?`${esc(z2h(sh.time).trim())}分`:esc(sh.time)):''],['マイク',sh.mics],['当日連絡先',sh.contact]]
     .filter(x=>x[1]);
@@ -606,18 +692,143 @@ $('#importFile').addEventListener('change',async e=>{
   e.target.value='';
 });
 
+/* ── CDを作る ── */
+const AUDIO=/\.(wav|mp3|m4a|aac|aif|aiff|flac)$/i;
+const FS_OK='showDirectoryPicker' in window;
+let dir=null,storedDir=null;const files=new Map(),durs=new Map();
+const idb={
+  open(){return this.p||(this.p=new Promise((res,rej)=>{const r=indexedDB.open('pa-sheet-maker',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))},
+  async get(k){try{const db=await this.open();return await new Promise(res=>{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)})}catch(e){return null}},
+  async set(k,v){try{const db=await this.open();await new Promise(res=>{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=tx.onerror=()=>res()})}catch(e){}}
+};
+const normName=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/\.[a-z0-9]{2,4}$/,'').replace(/^\s*\d{1,3}[\s._\-)]+/,'').replace(/[\s\-_・.,'"!?~〜()\[\]【】「」『』]/g,'');
+function bestFile(title){
+  const t=normName(title);if(!t)return '';let best='',bl=1e9;
+  for(const n of files.keys()){const f=normName(n);if(f===t)return n;
+    if(f.length>=2&&(f.includes(t)||t.includes(f))&&f.length<bl){best=n;bl=f.length}}
+  return best;
+}
+function cdTracks(){
+  const t=[],sh=S.show;let n=0;
+  if(sh.seIn)t.push({kind:'seIn',label:'登場SE',title:sh.seIn,file:sh.seInFile||''});
+  S.list.forEach(it=>{if(it.type!=='song')return;const s=song(it.songId);if(!s)return;t.push({kind:'song',id:s.id,label:'M'+(++n),title:s.title,file:s.file||''})});
+  if(sh.seOut)t.push({kind:'seOut',label:'退場SE',title:sh.seOut,file:sh.seOutFile||''});
+  return t;
+}
+function setTrackFile(t,name){if(t.kind==='song')song(t.id).file=name;else S.show[t.kind+'File']=name;save()}
+function autoMatch(){
+  if(!files.size)return;
+  S.songs.forEach(s=>{if(!s.file||!files.has(s.file)){const m=bestFile(s.title);if(m)s.file=m}});
+  ['seIn','seOut'].forEach(k=>{const f=S.show[k+'File'];if(S.show[k]&&(!f||!files.has(f))){const m=bestFile(S.show[k]);if(m)S.show[k+'File']=m}});
+  save();
+}
+function audioDur(file){return new Promise(res=>{const a=new Audio(),u=URL.createObjectURL(file);a.preload='metadata';
+  const done=v=>{URL.revokeObjectURL(u);res(v)};a.onloadedmetadata=()=>done(isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>done(0);a.src=u})}
+async function loadDurs(){
+  for(const t of cdTracks()){
+    if(!t.file||!files.has(t.file)||durs.has(t.file))continue;
+    try{durs.set(t.file,await audioDur(await files.get(t.file).getFile()))}catch(e){durs.set(t.file,0)}
+  }
+  let filled=0;S.songs.forEach(s=>{const d=durs.get(s.file);if(d&&!secs(s.len)){s.len=fmt(d);filled++}});
+  if(filled){save();renderAll();renderSongs();toast(`${filled}曲の尺を音源から入れました`)}
+  renderCD();
+}
+async function loadFolder(h){
+  dir=h;files.clear();
+  for await(const [name,e] of h.entries())if(e.kind==='file'&&AUDIO.test(name)&&!name.startsWith('.'))files.set(name,e);
+  await idb.set('dir',h);autoMatch();renderCD();renderSheet();loadDurs();
+}
+async function connect(h){
+  try{if(await h.requestPermission({mode:'readwrite'})==='granted'){await loadFolder(h);return true}}catch(e){}
+  toast('フォルダを使う許可が得られませんでした');return false;
+}
+async function pickFolder(){
+  try{const h=await window.showDirectoryPicker({id:'pa-audio',mode:'readwrite'});await loadFolder(h)}
+  catch(e){if(e&&e.name!=='AbortError')toast('フォルダを開けませんでした')}
+}
+function renderFolder(){
+  const el=$('#folderInfo');
+  if(!FS_OK){el.innerHTML='<span class="hint" style="margin:0">（このブラウザでは使えません）</span>';return}
+  if(dir)el.innerHTML=`<span class="ok">✓ つながっています</span><span class="name">📁 ${esc(dir.name)}</span><span class="hint" style="margin:0">音源 ${files.size}個</span><button class="btn" data-f="reload">読み直す</button><button class="btn" data-f="pick">別のフォルダを選ぶ</button>`;
+  else if(storedDir)el.innerHTML=`<button class="btn dark" data-f="connect">前回のフォルダ「${esc(storedDir.name)}」につなぐ</button><button class="btn" data-f="pick">別のフォルダを選ぶ</button>`;
+  else el.innerHTML='<button class="btn dark" data-f="pick">音源フォルダを選ぶ</button>';
+}
+$('#folderInfo').addEventListener('click',e=>{
+  const f=e.target.closest('button')?.dataset.f;
+  if(f==='pick')pickFolder();if(f==='connect')connect(storedDir);if(f==='reload')loadFolder(dir);
+});
+function renderCD(){
+  $('#cdUnsupported').hidden=FS_OK;renderFolder();
+  $('#cdOnSheet').checked=S.cdOnSheet!==false;
+  const tr=cdTracks(),names=[...files.keys()].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));
+  let total=0,miss=0,diff=0;
+  $('#cdBody').innerHTML=tr.length?tr.map((t,i)=>{
+    const have=t.file&&(!dir||files.has(t.file));if(!have)miss++;
+    const d=durs.get(t.file)||0;total+=d;
+    const reg=t.kind==='song'?secs(song(t.id).len):0,isDiff=d&&reg&&Math.abs(d-reg)>2;if(isDiff)diff++;
+    const sel=dir?`<select data-i="${i}" aria-label="${esc(t.title)}の音源ファイル"><option value="">（選んでください）</option>${names.map(n=>`<option ${n===t.file?'selected':''}>${esc(n)}</option>`).join('')}</select>`
+      :(t.file?esc(t.file):'<span style="color:var(--muted)">フォルダをつなぐと選べます</span>');
+    return `<tr class="${dir&&!have?'miss':''}"><td class="tr">${String(i+1).padStart(2,'0')}</td><td class="lbl">${t.label}</td><td>${esc(t.title)}</td><td>${sel}</td><td class="dur">${d?fmt(d):'—'}${isDiff?`<span class="diff">登録は ${esc(song(t.id).len)}</span>`:''}</td></tr>`;
+  }).join(''):'<tr><td colspan="5" style="color:var(--muted);padding:16px">セトリがまだありません。「セトリを組む」で曲を選んでください。</td></tr>';
+  const gaps=Math.max(0,tr.length-1)*2,over=total+gaps>79*60;
+  $('#cdTotals').innerHTML=tr.length&&dir?`<span>${tr.length}トラック</span><span>合計 <b class="${over?'over':''}">${fmt(total)}</b></span>${over?'<span class="over">CD-R 1枚（約80分）に入りきりません</span>':''}${miss?`<span class="over">ファイル未選択 ${miss}件</span>`:''}`:'';
+  $('#fitLen').hidden=!diff;
+}
+$('#cdBody').addEventListener('change',e=>{
+  const i=e.target.dataset.i;if(i===undefined)return;
+  setTrackFile(cdTracks()[+i],e.target.value);renderCD();renderSheet();loadDurs();
+});
+$('#cdOnSheet').addEventListener('change',e=>{S.cdOnSheet=e.target.checked;save();renderSheet()});
+$('#fitLen').addEventListener('click',()=>{
+  let k=0;cdTracks().forEach(t=>{if(t.kind!=='song')return;const s=song(t.id),d=durs.get(s.file);if(d&&secs(s.len)!==d){s.len=fmt(d);k++}});
+  save();renderAll();renderSongs();renderCD();toast(`${k}曲の尺を直しました`);
+});
+const safeName=v=>String(v).replace(/[\\/:*?"<>|\r\n\t]/g,'_').replace(/\s+/g,' ').trim().slice(0,80);
+$('#makeCD').addEventListener('click',async()=>{
+  const out=$('#cdProgress');
+  if(!FS_OK){out.textContent='パソコンの Chrome か Edge で開いてください。';return}
+  if(!dir){out.textContent='先に「1 音源フォルダをつなぐ」でフォルダを選んでください。';return}
+  const tr=cdTracks();
+  if(!tr.length){out.textContent='セトリが空です。';return}
+  const miss=tr.filter(t=>!t.file||!files.has(t.file));
+  if(miss.length){out.innerHTML=`<span class="over">音源ファイルが選ばれていない曲があります：${miss.map(t=>esc(t.title)).join('、')}</span>`;return}
+  try{
+    if(await dir.requestPermission({mode:'readwrite'})!=='granted'){out.textContent='フォルダへの書き込みが許可されませんでした。';return}
+    const base=safeName(`CD_${S.show.date||todayStr()}_${S.show.venue||S.show.artist||'セトリ'}`);
+    let name=base,k=2;
+    while(true){try{await dir.getDirectoryHandle(name);name=`${base}(${k++})`}catch(e){break}}
+    const outDir=await dir.getDirectoryHandle(name,{create:true});
+    for(let i=0;i<tr.length;i++){
+      const t=tr[i],src=await files.get(t.file).getFile(),ext=(t.file.match(/\.[^.]+$/)||[''])[0];
+      out.textContent=`コピー中… ${i+1} / ${tr.length}　${t.title}`;
+      const label=t.kind==='song'?t.title:`${t.label} ${t.title}`;
+      const fh=await outDir.getFileHandle(`${String(i+1).padStart(2,'0')} ${safeName(label)}${ext}`,{create:true});
+      const w=await fh.createWritable();await w.write(src);await w.close();
+    }
+    out.innerHTML=`✓ 「📁 ${esc(dir.name)} / ${esc(name)}」に ${tr.length} 曲を作りました。下の「4」の手順でCD-Rに書き込んでください。`;
+    toast('CD用フォルダを作りました');
+  }catch(e){out.innerHTML=`<span class="over">作れませんでした（${esc(e.message||e.name||'不明なエラー')}）。フォルダを選び直して、もう一度試してください。</span>`}
+});
+(async()=>{
+  if(!FS_OK){renderCD();return}
+  storedDir=await idb.get('dir');
+  if(storedDir){try{if(await storedDir.queryPermission({mode:'readwrite'})==='granted'){await loadFolder(storedDir);return}}catch(e){}}
+  renderCD();
+})();
+
 /* ── サンプル・タブ ── */
 $('#clearSample').addEventListener('click',()=>{
   if(!confirm('サンプルの曲とセトリを消して、空の状態から始めます。'))return;
   S={sample:false,songs:[],show:{date:todayStr()},list:[],saved:[]};save();fillShow();renderSongs();renderAll();showTab('songs');
 });
 function showTab(t){
-  const b=t==='build';$('#viewBuild').hidden=!b;$('#viewSongs').hidden=b;
-  $('#tabBuild').setAttribute('aria-selected',b);$('#tabSongs').setAttribute('aria-selected',!b);
-  if(b)fit();scrollTo(0,0);
+  [['build','#viewBuild','#tabBuild'],['songs','#viewSongs','#tabSongs'],['cd','#viewCD','#tabCD']].forEach(([k,v,b])=>{
+    $(v).hidden=k!==t;$(b).setAttribute('aria-selected',k===t)});
+  if(t==='build')fit();if(t==='cd')renderCD();scrollTo(0,0);
 }
 $('#tabBuild').addEventListener('click',()=>showTab('build'));
 $('#tabSongs').addEventListener('click',()=>showTab('songs'));
+$('#tabCD').addEventListener('click',()=>showTab('cd'));
 
 function renderAll(){$('#sampleBanner').hidden=!S.sample;renderPicker();renderList();renderSaved();renderSheet()}
 fillShow();renderSongs();renderAll();
