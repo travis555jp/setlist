@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PA指示書メーカー 使い方</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 1カラムの読み物。ツールと同じ「黒い卓＋養生テープ色」で、手順番号だけテープ色にする */
+:root{
+  --ink:#1b1d22;--bg:#eceef1;--card:#fff;--line:#d5d9df;--muted:#5e646e;--tape:#f4b400;--tape-d:#d99e00;--soft:#fff7dc;
+  --f:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.85 var(--f)}
+a{color:inherit}
+.bar{background:var(--ink);color:#fff;padding:12px max(16px,env(safe-area-inset-left,0px)) 12px max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center}
+.logo{font-weight:700;font-size:18px;display:flex;gap:10px;align-items:center}
+.logo i{display:inline-block;width:14px;height:22px;background:var(--tape);transform:skewX(-12deg)}
+.spacer{flex:1}
+.open{background:var(--tape);color:var(--ink);text-decoration:none;font-weight:700;padding:9px 20px;border-radius:10px;box-shadow:0 3px 0 var(--tape-d)}
+main{max-width:860px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px}
+h1{font-size:30px;line-height:1.35;margin:0;text-wrap:balance}
+.lead{margin:6px 0 0;font-size:17px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.toc a{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 14px;text-decoration:none;font-size:14px;font-weight:500}
+section.part{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+h2{font-size:22px;margin:0 0 4px;text-wrap:balance}
+.when{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.06em;background:var(--ink);color:#fff;border-radius:6px;padding:1px 10px;margin-bottom:8px}
+.steps{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:26px;counter-reset:s}
+.steps>li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;counter-increment:s}
+.steps>li>*{grid-column:2}
+.steps>li::before{content:counter(s);grid-column:1;grid-row:1/span 2;width:40px;height:40px;border-radius:50%;background:var(--tape);color:var(--ink);font-weight:700;font-size:20px;display:grid;place-items:center}
+.steps h3{margin:4px 0 0;font-size:18px}
+.steps p{margin:0}
+.shot{display:block;max-width:100%;border:1px solid var(--line);border-radius:10px;margin-top:10px;background:#fff}
+.shot.half{max-width:min(100%,520px)}
+.btnname{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:6px;padding:0 8px;font-weight:700;font-size:.92em;white-space:nowrap}
+.btnname.y{background:var(--tape);border-color:var(--tape-d)}
+.tip{background:var(--soft);border:1px solid #f0d58a;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:15px}
+.tip>b:first-child{display:block}
+ul.plain{margin:6px 0 0;padding-left:1.3em}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;min-width:480px;font-size:15px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#f3f4f6;font-weight:700;white-space:nowrap}
+.qa dt{font-weight:700;margin-top:14px}
+.qa dt::before{content:"Q. ";color:var(--tape-d)}
+.qa dd{margin:2px 0 0}
+.qa dd::before{content:"A. ";font-weight:700}
+footer{text-align:center;color:var(--muted);font-size:13px}
+:focus-visible{outline:3px solid #23408f;outline-offset:2px}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  body{background:#fff;font-size:11pt;line-height:1.7}
+  .bar,.toc,footer{display:none}
+  main{padding:0;max-width:none}
+  section.part{border:0;padding:0;break-inside:auto}
+  .steps>li{break-inside:avoid}
+  .shot{max-height:55mm;width:auto}
+  .shot.half{max-height:85mm}
+  .steps{gap:14px}
+  section.part{margin-bottom:6mm}
+  .steps>li::before,.when{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="logo"><i></i>PA指示書メーカー 使い方</div>
+  <div class="spacer"></div>
+  <a class="open" href="./">ツールを開く</a>
+</header>
+
+<main>
+  <div>
+    <h1>セトリを選ぶだけで、PA指示書がA4で印刷できます</h1>
+    <p class="lead">曲ごとの指示（尺・音源・出し方・終わり方）は最初に1回登録すれば、あとは毎回自動で入ります。</p>
+    <nav class="toc">
+      <a href="#first">はじめに（1回だけ）</a>
+      <a href="#live">ライブのたびに</a>
+      <a href="#words">指示の言葉の意味</a>
+      <a href="#saved">よく使うセトリを保存</a>
+      <a href="#qa">困ったとき</a>
+    </nav>
+  </div>
+
+  <section class="part" id="first">
+    <span class="when">最初の1回だけ</span>
+    <h2>はじめに</h2>
+    <ol class="steps">
+      <li>
+        <h3>ツールを開いて、ブックマークする</h3>
+        <p>Chrome か Edge で <b>https://travis555jp.github.io/setlist/</b> を開き、ブックマーク（☆マーク）しておきます。次からはブックマークから開くだけです。</p>
+      </li>
+      <li>
+        <h3>サンプルを消す</h3>
+        <p>最初は練習用のサンプル曲が入っています。触って試したあと、<span class="btnname">サンプルを消して始める</span> を押します。</p>
+        <img class="shot" src="manual/02-sample.png" alt="サンプルを消して始めるボタンのある黄色い案内">
+      </li>
+      <li>
+        <h3>自分たちの曲を登録する</h3>
+        <p>画面上の <span class="btnname">曲の登録</span> を押し、曲名・尺・音源・出し方・終わり・PAへの備考を入れて <span class="btnname">この曲を登録</span>。全曲くり返します。</p>
+        <img class="shot" src="manual/08-add.png" alt="曲を登録する入力欄">
+        <div class="tip"><b>まとめて入れたいとき</b>
+          <ul class="plain">
+            <li>「曲名をまとめて登録」の欄に、1行に1曲ずつ貼り付けると一度に登録できます</li>
+            <li>Excelで作りたい場合は <span class="btnname">CSVで書き出す</span> → Excelで編集して保存 → <span class="btnname">CSVを読み込む</span></li>
+          </ul>
+        </div>
+        <p style="margin-top:10px">登録した曲は下の一覧でいつでも直せます。尺は「3:45」でも「345」でもOKです。</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="part" id="live">
+    <span class="when">ライブのたびに</span>
+    <h2>PA指示書を作って印刷する</h2>
+    <ol class="steps">
+      <li>
+        <h3>ライブの情報を入れる</h3>
+        <p>画面上の <span class="btnname">セトリを組む</span> を押し、「1 ライブの情報」に出演者名・日付・会場・持ち時間などを入れます。空欄の項目は紙に出ません。</p>
+        <img class="shot" src="manual/03-info.png" alt="ライブの情報の入力欄">
+      </li>
+      <li>
+        <h3>曲を押して、セトリを作る</h3>
+        <p>「2 曲をえらぶ」で、歌う順番に曲名を押していきます。MCを入れたい場所では <span class="btnname">＋ MCを入れる</span> を押します。</p>
+        <img class="shot" src="manual/04-pick.png" alt="曲をえらぶ欄。曲名のボタンが並んでいる">
+      </li>
+      <li>
+        <h3>順番を直す・このライブだけ変える</h3>
+        <p><span class="btnname">↑</span><span class="btnname">↓</span> で順番を入れ替え、<span class="btnname">×</span> でセトリから外します（曲の登録は消えません）。<br>
+        今日だけ終わり方を変えたい時などは <span class="btnname">変更</span> を押します。ここで変えても、登録した曲の設定はそのままです。</p>
+        <img class="shot half" src="manual/05-list.png" alt="セットリスト。M3の変更を開いた状態">
+        <div class="tip"><b>持ち時間のチェック</b>曲の合計とMC込みの目安が下に出ます。持ち時間を超えると赤字で「オーバー」と出ます。</div>
+      </li>
+      <li>
+        <h3>右の印刷イメージを確認して、印刷する</h3>
+        <p>右側に、印刷される紙がそのまま表示されます。よければ黄色の <span class="btnname y">🖨 印刷する</span> を押します。</p>
+        <img class="shot half" src="manual/07-sheet.png" alt="A4のPA指示書の印刷イメージ">
+        <div class="tip"><b>印刷画面での設定（ここだけ注意）</b>
+          <ul class="plain">
+            <li>用紙サイズ：<b>A4</b></li>
+            <li>「詳細設定」の <b>ヘッダーとフッター：オフ</b>（URLや日付が紙に入らなくなります）</li>
+            <li>PDFで保存してLINEなどで送りたい時は、送信先（プリンター）を <b>「PDFに保存」</b> にします</li>
+          </ul>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="part" id="words">
+    <h2>指示の言葉の意味</h2>
+    <p>紙の網かけ（グレー）の所は、PAさんに特に気をつけてほしい箇所です。</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>欄</th><th>言葉</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">音源</td><td>被せ</td><td>歌入りの音源にあわせて歌う</td></tr>
+          <tr><td>オケ</td><td>カラオケ（歌なし）の音源</td></tr>
+          <tr><td>生歌</td><td>音源の歌はなし。全部生で歌う</td></tr>
+          <tr><td rowspan="3">出し方</td><td>合図で出す</td><td>メンバーの合図（目線・手など）で再生してもらう</td></tr>
+          <tr><td>すぐ出す</td><td>前の曲が終わったらすぐ再生（曲つなぎ）。<b>網かけ</b>になります</td></tr>
+          <tr><td>暗転明けに出す</td><td>照明が暗くなって明けたら再生</td></tr>
+          <tr><td rowspan="3">終わり</td><td>最後まで</td><td>音源を最後まで流す</td></tr>
+          <tr><td>フェードアウト</td><td>だんだん音を小さくして終わる（FO）。<b>網かけ</b>になります</td></tr>
+          <tr><td>カットアウト</td><td>決めた所でピタッと止める（CO）。<b>網かけ</b>になります</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="part" id="saved">
+    <h2>よく使うセトリを保存する</h2>
+    <p>定期公演などで同じセトリを使う時は、「保存したセトリ」に名前を付けて <span class="btnname">今のセトリを保存</span>。次回は <span class="btnname">呼び出す</span> を押すだけで曲順が戻ります。</p>
+    <img class="shot" src="manual/06-saved.png" alt="保存したセトリの欄">
+    <p style="margin-top:10px">呼び出しても、会場・持ち時間などのライブ情報は今入れている内容のままです。</p>
+  </section>
+
+  <section class="part" id="qa">
+    <h2>困ったとき</h2>
+    <dl class="qa">
+      <dt>開いたら曲が全部なくなっていた</dt>
+      <dd>データは「そのパソコンの、そのブラウザ」の中にだけ保存されています。別のパソコンや別のブラウザ（ChromeとEdgeなど）、シークレットウィンドウで開くと空になります。いつものパソコン・ブラウザで開き直してください。ブラウザの「閲覧データを削除」をすると消えてしまいます。</dd>
+      <dt>万一に備えて控えを取りたい／別のパソコンで使いたい</dt>
+      <dd>「曲の登録」の <span class="btnname">CSVで書き出す</span> で曲リストを、<span class="btnname">控えをファイルに書き出す</span> で保存したセトリも含めた全部を、ファイルに残せます。別のパソコンでは <span class="btnname">控えファイルから戻す</span> で読み込みます。曲を増やしたら控えも取り直しておくと安心です。</dd>
+      <dt>紙の上や下にURLや日付が入ってしまう</dt>
+      <dd>印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外してください。</dd>
+      <dt>曲が多くて2枚になってしまう</dt>
+      <dd>14行を超えると自動で行が詰まります。それでも収まらない時は、印刷画面の「倍率」を90%くらいにしてください。</dd>
+      <dt>曲名のスペルを直したい</dt>
+      <dd>「曲の登録」の一覧で直接書き換えれば、セトリと印刷イメージにもすぐ反映されます。</dd>
+      <dt>入力した内容は外に送られますか？</dt>
+      <dd>送られません。データはこのパソコンの中だけにあり、ツールの置き場所（GitHub）からも見えません。</dd>
+    </dl>
+  </section>
+
+  <footer>PA指示書メーカー　<a href="./">ツールを開く</a></footer>
+</main>
+</body>
+</html>
