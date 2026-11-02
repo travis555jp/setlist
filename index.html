@@ -186,6 +186,12 @@ textarea{resize:vertical;min-height:110px}
 .burn .box{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .sh-list td .trno{display:block;font-size:7.5pt;font-weight:700;letter-spacing:.02em;margin-top:.5mm}
 #printArea{display:none}
+.outbox{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
+.outbox h3{margin:0 0 8px;font-size:15px}
+.outhelp{margin:10px 0 0;padding-left:1.2em;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.outhelp b{color:var(--ink);font-weight:500}
+.btn:disabled{opacity:.5;cursor:wait}
+#snapBox{position:absolute;left:0;top:0;width:210mm;min-height:297mm;padding:10mm;background:#fff;color:#000;opacity:0;pointer-events:none;z-index:-1}
 #sheetMeasure{position:absolute;left:-10000px;top:0;width:190mm;visibility:hidden;pointer-events:none}
 @media print{
   @page{size:A4 portrait;margin:10mm}
@@ -272,6 +278,20 @@ textarea{resize:vertical;min-height:110px}
         <div class="pv" id="pv"><div class="pvinner" id="pvInner"><div class="paper" id="paper"><div class="sheet" id="sheetPv"></div></div></div></div>
         <p class="printtip" id="pageWarn" hidden style="color:var(--warn);font-weight:700">曲が多いため、いちばん詰めても2枚になります。印刷画面の「倍率」を下げると1枚に収まります。</p>
         <p class="printtip">印刷画面では「用紙サイズ：A4」「ヘッダーとフッター：オフ」にしてください。PDFで保存したいときは、送信先を「PDFに保存」にします。</p>
+        <div class="outbox">
+          <h3>Canvaで使う</h3>
+          <div class="btns">
+            <button class="btn dark" id="copyImg">画像をコピー</button>
+            <button class="btn" id="saveImg">画像を保存（PNG）</button>
+            <button class="btn" id="copyText">文字だけコピー</button>
+          </div>
+          <ul class="outhelp">
+            <li><b>画像をコピー</b>：Canvaのデザイン画面で Ctrl＋V（Macは ⌘＋V）を押すと、そのまま貼り付けられます。</li>
+            <li><b>画像を保存</b>：A4サイズのPNGで保存します。Canvaの「アップロード」から使えます。</li>
+            <li><b>文字だけコピー</b>：自分で作ったCanvaのデザインに、曲順や指示の文字だけ貼りたいときに使います。</li>
+            <li>Canvaで文字も直したいときは、上の「印刷する」から「PDFに保存」したPDFをCanvaにアップロードしてください。</li>
+          </ul>
+        </div>
       </section>
     </div>
   </div>
@@ -662,6 +682,75 @@ addEventListener('resize',fit);
 if(document.fonts)document.fonts.ready.then(()=>renderSheet());
 function doPrint(){if(!S.list.length&&!confirm('セトリが空です。このまま印刷しますか？'))return;window.print()}
 $('#printTop').addEventListener('click',doPrint);$('#printSide').addEventListener('click',doPrint);
+
+/* ── Canva用の出力 ── */
+let h2cP=null;
+function loadH2C(){
+  return h2cP||(h2cP=new Promise((res,rej)=>{
+    if(window.html2canvas)return res(window.html2canvas);
+    const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    sc.onload=()=>res(window.html2canvas);sc.onerror=()=>{h2cP=null;rej(new Error('画像を作る部品を読み込めませんでした。インターネットにつながっているか確認してください'))};
+    document.head.appendChild(sc);
+  }));
+}
+async function sheetPNG(){
+  const h2c=await loadH2C();
+  const box=document.createElement('div');box.id='snapBox';
+  box.innerHTML=`<div class="${$('#sheetPrint').className}">${$('#sheetPrint').innerHTML}</div>`;
+  document.body.appendChild(box);
+  try{
+    if(document.fonts)await document.fonts.ready;
+    const c=await h2c(box,{scale:2.5,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:-window.scrollY,
+      windowWidth:document.documentElement.scrollWidth,onclone:d=>{d.getElementById('snapBox').style.opacity='1'}});
+    return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('画像を作れませんでした')),'image/png'));
+  }finally{box.remove()}
+}
+const outName=ext=>safeName(`PA指示書_${S.show.date||todayStr()}_${S.show.venue||S.show.artist||'セトリ'}`)+ext;
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+async function busy(btn,fn){btn.disabled=true;const t=btn.textContent;btn.textContent='作成中…';try{await fn()}finally{btn.disabled=false;btn.textContent=t}}
+$('#copyImg').addEventListener('click',e=>busy(e.currentTarget,async()=>{
+  const p=sheetPNG();p.catch(()=>{});
+  try{
+    if(!navigator.clipboard||!window.ClipboardItem)throw new Error('nocopy');
+    await navigator.clipboard.write([new ClipboardItem({'image/png':p})]);
+    toast('画像をコピーしました。Canvaで Ctrl＋V で貼り付けられます');
+  }catch(err){
+    try{saveBlob(await p,outName('.png'));toast('このブラウザではコピーできないため、画像を保存しました')}
+    catch(e2){toast(e2.message||'画像を作れませんでした')}
+  }
+}));
+$('#saveImg').addEventListener('click',e=>busy(e.currentTarget,async()=>{
+  try{saveBlob(await sheetPNG(),outName('.png'));toast('画像を保存しました')}catch(err){toast(err.message||'画像を作れませんでした')}
+}));
+function sheetTable(){
+  const sh=S.show,lightOf=it=>(it.light||'').trim()||(song(it.songId)?.light||'').trim();
+  const hasLight=S.list.some(it=>it.type==='song'&&song(it.songId)&&lightOf(it));
+  const head=['No','曲名','尺','音源','出し方','終わり'].concat(hasLight?['照明']:[],['備考']);
+  const rows=[];let n=0;const pad=a=>{while(a.length<head.length)a.push('');return a};
+  if(sh.seIn)rows.push(pad(['SE','登場SE '+sh.seIn]));
+  S.list.forEach(it=>{
+    if(it.type==='mc'){rows.push(pad(['MC',`MC（約${it.min}分）${it.note?' '+it.note:''}`]));return}
+    const s=song(it.songId);if(!s)return;
+    rows.push([`M${++n}`,s.title,s.len,s.source,it.start||s.start,it.end||s.end].concat(hasLight?[lightOf(it)]:[],[[s.note,it.note].filter(Boolean).join(' / ')]));
+  });
+  if(sh.seOut)rows.push(pad(['SE','退場SE '+sh.seOut]));
+  const top=[sh.artist,jpDate(sh.date),sh.venue].filter(Boolean).join('　');
+  return {top,head,rows};
+}
+$('#copyText').addEventListener('click',async()=>{
+  const {top,head,rows}=sheetTable();
+  if(!rows.length){toast('セトリが空です');return}
+  const clean=v=>String(v??'').replace(/[\t\r\n]+/g,' ');
+  const tsv=[top,'',head.join('\t')].concat(rows.map(r=>r.map(clean).join('\t'))).join('\n');
+  const html=`<p>${esc(top)}</p><table><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+  try{
+    if(window.ClipboardItem)await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([tsv],{type:'text/plain'}),'text/html':new Blob([html],{type:'text/html'})})]);
+    else await navigator.clipboard.writeText(tsv);
+    toast('文字をコピーしました。Canvaの文字や表に貼り付けられます');
+  }catch(e){
+    try{await navigator.clipboard.writeText(tsv);toast('文字をコピーしました')}catch(e2){toast('コピーできませんでした')}
+  }
+});
 
 /* ── 曲の登録 ── */
 ['source','start','end'].forEach(k=>$('#a_'+k).innerHTML=opts(OPT[k],OPT[k][0]));
