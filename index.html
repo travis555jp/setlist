@@ -138,13 +138,12 @@ textarea{resize:vertical;min-height:110px}
 .sh-info dt{font-size:8pt;color:#333}
 .sh-info dd{margin:0;font-size:11.5pt;font-weight:700;word-break:break-all}
 .sh-list{width:100%;border-collapse:collapse;table-layout:fixed}
-.sh-list th{background:#000;color:#fff;font-size:9pt;font-weight:700;padding:1.5mm 1.5mm;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sh-list th{white-space:nowrap;background:#000;color:#fff;font-size:9pt;font-weight:700;padding:1.5mm 1.5mm;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sh-list td{border:.8pt solid #000;padding:2.4mm 2mm;vertical-align:middle;word-break:break-all}
 .sh-list .c{text-align:center}
 .sh-list td.c.no{font-size:13pt;font-weight:700;white-space:nowrap;padding-left:1mm;padding-right:1mm}
 .sh-list td.c{font-size:10.5pt;word-break:keep-all;overflow-wrap:anywhere}
 .sh-list .light{font-size:10pt}
-.sh-list.withlight .title{font-size:13pt}
 .sh-info+.sh-lightall{border-top:0;margin-top:-5mm}
 .sh-lightall{border:1pt solid #000;margin:0 0 5mm;padding:1.6mm 2.4mm;font-size:10.5pt;display:flex;gap:3mm;align-items:baseline}
 .sh-lightall b{font-size:8pt;font-weight:400;color:#333;flex:none}
@@ -154,8 +153,16 @@ textarea{resize:vertical;min-height:110px}
 .sh-list tr.mc td,.sh-list tr.se td{background:#f0f0f0;font-size:11pt;padding:1.6mm 2mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sh-list tr.se td{background:#fff;border-style:solid}
 .sh-list .muted{color:#777;padding:8mm}
-.sheet.compact .sh-list td{padding:1.4mm 1.6mm}
-.sheet.compact .sh-list .title,.sheet.compact .sh-list .no{font-size:12pt}
+.sheet.lv1 .sh-list td{padding:1.4mm 1.6mm}
+.sheet.lv1 .sh-list .title,.sheet.lv1 .sh-list td.c.no{font-size:12pt}
+.sheet.lv2 .sh-list td{padding:.8mm 1.2mm}
+.sheet.lv2 .sh-list .title,.sheet.lv2 .sh-list td.c.no{font-size:11pt}
+.sheet.lv2 .sh-list td.c{font-size:9.5pt}
+.sheet.lv2 .sh-list .note,.sheet.lv2 .sh-list .light{font-size:9pt}
+.sheet.lv2 .sh-list tr.mc td,.sheet.lv2 .sh-list tr.se td{padding:.8mm 1.2mm;font-size:10pt}
+.sheet.lv2 .sh-top{margin-bottom:3mm}.sheet.lv2 .sh-artist{font-size:20pt}
+.sheet.lv2 .sh-info+.sh-lightall{margin-top:-3mm}
+.sheet.lv2 .sh-info{margin-bottom:3mm}.sheet.lv2 .sh-info div{min-height:0;padding:1mm 2mm}
 .sh-foot{display:flex;flex-wrap:wrap;gap:2mm 6mm;margin-top:4mm;font-size:11pt;font-weight:700}
 .sh-foot .over{color:#000;text-decoration:underline}
 .sh-legend{margin-top:3mm;font-size:8.5pt;color:#333;border-top:.6pt solid #999;padding-top:2mm}
@@ -179,6 +186,7 @@ textarea{resize:vertical;min-height:110px}
 .burn .box{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .sh-list td .trno{display:block;font-size:7.5pt;font-weight:700;letter-spacing:.02em;margin-top:.5mm}
 #printArea{display:none}
+#sheetMeasure{position:absolute;left:-10000px;top:0;width:190mm;visibility:hidden;pointer-events:none}
 @media print{
   @page{size:A4 portrait;margin:10mm}
   body{background:#fff}
@@ -262,6 +270,7 @@ textarea{resize:vertical;min-height:110px}
           <button class="print-btn" id="printSide">🖨 印刷する</button>
         </div>
         <div class="pv" id="pv"><div class="pvinner" id="pvInner"><div class="paper" id="paper"><div class="sheet" id="sheetPv"></div></div></div></div>
+        <p class="printtip" id="pageWarn" hidden style="color:var(--warn);font-weight:700">曲が多いため、いちばん詰めても2枚になります。印刷画面の「倍率」を下げると1枚に収まります。</p>
         <p class="printtip">印刷画面では「用紙サイズ：A4」「ヘッダーとフッター：オフ」にしてください。PDFで保存したいときは、送信先を「PDFに保存」にします。</p>
       </section>
     </div>
@@ -387,6 +396,7 @@ textarea{resize:vertical;min-height:110px}
   </div>
 </main>
 
+<div id="sheetMeasure" class="sheet" aria-hidden="true"></div>
 <div id="printArea"><div class="sheet" id="sheetPrint"></div></div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -549,47 +559,98 @@ $('#saved').addEventListener('click',e=>{
 });
 
 /* ── 紙面 ── */
-function sheetHTML(){
-  const sh=S.show;let n=0,rows='',count=0,tr=0;
+/* 列幅の自動調整：入力された文字の長さを測り、表全体の高さが一番低くなる幅を選ぶ */
+const SHEET_FONT='"BIZ UDPGothic","Yu Gothic","Meiryo",sans-serif';
+const mctx=document.createElement('canvas').getContext('2d');
+function tw(t,pt,bold){mctx.font=`${bold?'700 ':''}${pt*96/72}px ${SHEET_FONT}`;return mctx.measureText(String(t||'')).width*25.4/96*1.04}   // mm
+const PT=0.3528,TABLE_W=190,PAGE_H=277;
+// 詰め具合の段階（0=ふつう、1=少し詰める、2=しっかり詰める）。CSSの .lv1 .lv2 と同じ値
+const LV=[{pad:2,vpad:2.4,fT:14,fNo:13,fC:10.5,fN:10},{pad:1.6,vpad:1.4,fT:12,fNo:12,fC:10.5,fN:10},{pad:1.2,vpad:0.8,fT:11,fNo:11,fC:9.5,fN:9}];
+function layoutCols(rows,hasLight,lv){
+  const {pad,vpad,fT,fNo,fC,fN}=LV[lv],lh=1.4,edge=2*pad+0.6;
+  const parts=v=>String(v).split('|');
+  const em1=r=>r.em1,em2=r=>r.em2;
+  // 文字幅を先に測っておく
+  const m=rows.map(r=>({
+    no:tw(r.no,fNo,true),len:tw(r.len,fC),src:tw(r.source,fC),
+    st:tw(parts(r.start).join(''),fC,r.em1),stP:Math.max(...parts(r.start).map(x=>tw(x,fC,r.em1))),stN:parts(r.start).length,
+    en:tw(parts(r.end).join(''),fC,r.em2),enP:Math.max(...parts(r.end).map(x=>tw(x,fC,r.em2))),enN:parts(r.end).length,
+    title:tw(r.title,fT,true),light:tw(r.light,fN),note:(r.note.length?r.note:['']).map(x=>tw(x,fN))}));
+  const mx=(k,min)=>Math.max(min,...m.map(x=>x[k]+edge));
+  // 固定列：中身にぴったり合わせる（出し方・終わりは長すぎるときだけ2行に折る）
+  const wNo=Math.max(11,...m.map(x=>x.no+2.6));
+  const wLen=mx('len',10),wSrc=mx('src',11);
+  const wSt=mx('st',14)<=27?mx('st',14):mx('stP',14),wEn=mx('en',14)<=27?mx('en',14):mx('enP',14);
+  const rest=TABLE_W-wNo-wLen-wSrc-wSt-wEn;
+  const L=(w,col)=>Math.max(1,Math.ceil(w/Math.max(1,col-edge)));
+  const tLine=fT*PT*lh,nLine=fN*PT*lh,cLine=fC*PT*lh;
+  const fixedH=m.map((x,i)=>Math.max(fNo*PT*lh+(rows[i].tr?3:0),(x.st+edge<=wSt?1:x.stN)*cLine,(x.en+edge<=wEn?1:x.enN)*cLine));
+  const height=(wt,wl,wn)=>m.reduce((h,x,i)=>h+Math.max(fixedH[i],L(x.title,wt)*tLine,hasLight?L(x.light,wl)*nLine:0,
+    x.note.reduce((n,w)=>n+L(w,wn),0)*nLine)+2*vpad,0);
+  // 自由列（曲名・照明・備考）を1mm刻みで総当たりし、表の高さが最小になる組を選ぶ
+  const minT=24,minL=hasLight?18:0,minN=18;
+  let best=null;
+  for(let wt=minT;wt<=rest-minL-minN;wt++)
+    for(let wl=minL;wl<=(hasLight?rest-wt-minN:0);wl++){
+      const wn=rest-wt-wl,h=height(wt,wl,wn);
+      // 高さが同じなら、備考欄（PAさんの書き込み用）を広く残す
+      if(!best||h<best.h-0.01||(Math.abs(h-best.h)<=0.01&&wn>best.wn))best={h,wt,wl,wn};
+    }
+  if(!best)best={h:0,wt:Math.max(minT,rest-minL-minN),wl:minL,wn:minN};
+  return [wNo,best.wt,wLen,wSrc,wSt,wEn].concat(hasLight?[best.wl]:[],[best.wn]).map(x=>`<col style="width:${x.toFixed(1)}mm">`).join('');
+}
+function sheetHTML(lv){
+  const sh=S.show;let n=0,tr=0;
   const lightOf=it=>(it.light||'').trim()||(song(it.songId)?.light||'').trim();
   const hasLight=S.list.some(it=>it.type==='song'&&song(it.songId)&&lightOf(it));
   const span=hasLight?7:6;
-  const W={'合図で出す':'合図で<wbr>出す','すぐ出す':'すぐ<wbr>出す','暗転明けに出す':'暗転明けに<wbr>出す','最後まで':'最後<wbr>まで','フェードアウト':'フェード<wbr>アウト','カットアウト':'カット<wbr>アウト'};
-  const wb=v=>W[v]||esc(v);
+  const W={'合図で出す':'合図で|出す','すぐ出す':'すぐ|出す','暗転明けに出す':'暗転明けに|出す','最後まで':'最後|まで','フェードアウト':'フェード|アウト','カットアウト':'カット|アウト'};
+  const wb=v=>String(v).split('|').map(esc).join('<wbr>');
   const showTr=S.cdOnSheet!==false&&cdTracks().some(t=>t.file);
-  const trTag=()=>showTr?`<span class="trno">Tr${++tr}</span>`:'';
-  if(sh.seIn){rows+=`<tr class="se"><td class="c"><b>SE</b>${trTag()}</td><td colspan="${span}"><b>登場SE</b>　${esc(sh.seIn)}</td></tr>`;count++}
+  const items=[];   // {kind:'se'|'mc'|'song', ...}
+  if(sh.seIn)items.push({kind:'se',label:'登場SE',title:sh.seIn,tr:showTr?++tr:0});
   S.list.forEach(it=>{
-    count++;
-    if(it.type==='mc'){rows+=`<tr class="mc"><td class="c"><b>MC</b></td><td colspan="${span}">MC（約${it.min}分）${it.note?'　'+esc(it.note):''}</td></tr>`;return}
+    if(it.type==='mc'){items.push({kind:'mc',min:it.min,note:it.note});return}
     const s=song(it.songId);if(!s)return;n++;
     const st=it.start||s.start,en=it.end||s.end;
-    const note=[s.note,it.note].filter(Boolean).map(esc).join('<br>');
-    rows+=`<tr><td class="c no">M${n}${trTag()}</td><td class="title">${esc(s.title)}</td><td class="c">${esc(s.len)}</td><td class="c">${esc(s.source)}</td>`+
-      `<td class="c ${st==='すぐ出す'?'em':''}">${wb(st)}</td><td class="c ${en!=='最後まで'?'em':''}">${wb(en)}</td>`+
-      (hasLight?`<td class="light">${esc(lightOf(it))}</td>`:'')+`<td class="note">${note}</td></tr>`;
+    items.push({kind:'song',no:`M${n}`,tr:showTr?++tr:0,title:s.title,len:s.len,source:s.source,start:W[st]||st,end:W[en]||en,
+      em1:st==='すぐ出す',em2:en!=='最後まで',light:lightOf(it),note:[s.note,it.note].filter(Boolean)});
   });
-  if(sh.seOut){rows+=`<tr class="se"><td class="c"><b>SE</b>${trTag()}</td><td colspan="${span}"><b>退場SE</b>　${esc(sh.seOut)}</td></tr>`;count++}
-  if(!n&&!rows)rows=`<tr><td colspan="${span+1}" class="c muted">曲がまだ選ばれていません</td></tr>`;
+  if(sh.seOut)items.push({kind:'se',label:'退場SE',title:sh.seOut,tr:showTr?++tr:0});
+  const songRows=items.filter(x=>x.kind==='song');
+  const trTag=x=>x.tr?`<span class="trno">Tr${x.tr}</span>`:'';
+  // 1枚に収まらなさそうなら詰めて組む
   const info=[['会場',sh.venue],['出番',sh.slot],['持ち時間',sh.time?(/^\s*[\d０-９.]+\s*$/.test(sh.time)?`${esc(z2h(sh.time).trim())}分`:esc(sh.time)):''],['マイク',sh.mics],['当日連絡先',sh.contact]]
     .filter(x=>x[1]);
+  let rows=items.map(x=>{
+    if(x.kind==='se')return `<tr class="se"><td class="c no"><b>SE</b>${trTag(x)}</td><td colspan="${span}"><b>${x.label}</b>　${esc(x.title)}</td></tr>`;
+    if(x.kind==='mc')return `<tr class="mc"><td class="c"><b>MC</b></td><td colspan="${span}">MC（約${x.min}分）${x.note?'　'+esc(x.note):''}</td></tr>`;
+    return `<tr><td class="c no">${x.no}${trTag(x)}</td><td class="title">${esc(x.title)}</td><td class="c">${esc(x.len)}</td><td class="c">${esc(x.source)}</td>`+
+      `<td class="c ${x.em1?'em':''}">${wb(x.start)}</td><td class="c ${x.em2?'em':''}">${wb(x.end)}</td>`+
+      (hasLight?`<td class="light">${esc(x.light)}</td>`:'')+`<td class="note">${x.note.map(esc).join('<br>')}</td></tr>`;
+  }).join('');
+  if(!rows)rows=`<tr><td colspan="${span+1}" class="c muted">曲がまだ選ばれていません</td></tr>`;
   const cells=info.map(([k,v])=>`<div><dt>${k}</dt><dd>${k==='持ち時間'?v:esc(v)}</dd></div>`);
   while(cells.length%4)cells.push('<div></div>');
   const c=calc();
-  return {compact:count>13,html:`
+  return `
   <div class="sh-top"><div><div class="sh-label">PA 指示書</div><div class="sh-artist">${esc(sh.artist)||'（出演者名）'}</div></div><div class="sh-date">${jpDate(sh.date)}</div></div>
   ${cells.length?`<dl class="sh-info" style="margin-top:0">${cells.join('')}</dl>`:''}
   ${sh.lightAll?`<div class="sh-lightall"><b>照明</b>${esc(sh.lightAll)}</div>`:''}
-  <table class="sh-list${hasLight?' withlight':''}"><colgroup>${hasLight
-    ?'<col style="width:12mm"><col style="width:38mm"><col style="width:12mm"><col style="width:12mm"><col style="width:24mm"><col style="width:24mm"><col style="width:32mm"><col>'
-    :'<col style="width:13mm"><col style="width:46mm"><col style="width:13mm"><col style="width:13mm"><col style="width:26mm"><col style="width:26mm"><col>'}</colgroup>
+  <table class="sh-list"><colgroup>${layoutCols(songRows,hasLight,lv)}</colgroup>
   <thead><tr><th>No</th><th>曲名</th><th>尺</th><th>音源</th><th>出し方</th><th>終わり</th>${hasLight?'<th>照明</th>':''}<th>備考</th></tr></thead><tbody>${rows}</tbody></table>
   ${c.count?`<div class="sh-foot"><span>全${c.count}曲</span><span>曲の合計 ${fmt(c.songSec)}</span><span>MC込みの目安 ${fmt(c.songSec+c.mcSec)}</span>${c.limit?`<span class="${c.over?'over':''}">持ち時間 ${c.limit}分</span>`:''}</div>`:''}
-  <div class="sh-legend">出し方：合図で出す＝メンバーの合図で再生／すぐ出す＝前の曲が終わったらすぐ再生（曲つなぎ）／暗転明けに出す＝暗転のあと再生。　網かけ＝特に注意してほしい箇所</div>`};
+  <div class="sh-legend">出し方：合図で出す＝メンバーの合図で再生／すぐ出す＝前の曲が終わったらすぐ再生（曲つなぎ）／暗転明けに出す＝暗転のあと再生。　網かけ＝特に注意してほしい箇所</div>`;
 }
 function renderSheet(){
-  const {html,compact}=sheetHTML();
-  for(const id of ['#sheetPv','#sheetPrint']){const el=$(id);el.innerHTML=html;el.classList.toggle('compact',compact)}
+  const ms=$('#sheetMeasure'),mm=96/25.4;let lv=0,html;
+  for(;lv<LV.length;lv++){
+    html=sheetHTML(lv);ms.className='sheet lv'+lv;ms.innerHTML=html;
+    if(ms.offsetHeight/mm<=PAGE_H-2)break;
+  }
+  const over=lv>=LV.length;if(over)lv=LV.length-1;
+  for(const id of ['#sheetPv','#sheetPrint']){const el=$(id);el.className='sheet lv'+lv;el.innerHTML=html}
+  $('#pageWarn').hidden=!over;
   fit();
 }
 function fit(){
@@ -598,7 +659,7 @@ function fit(){
   paper.style.transform=`scale(${sc})`;inner.style.height=paper.offsetHeight*sc+'px';
 }
 addEventListener('resize',fit);
-if(document.fonts)document.fonts.ready.then(fit);
+if(document.fonts)document.fonts.ready.then(()=>renderSheet());
 function doPrint(){if(!S.list.length&&!confirm('セトリが空です。このまま印刷しますか？'))return;window.print()}
 $('#printTop').addEventListener('click',doPrint);$('#printSide').addEventListener('click',doPrint);
 
